@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FitWithPutter</string>
+    <string name="backgroundoffrontpage">backgroundOfFrontPage</string>
+    <string name="choose">Choose device</string>
+    <string name="weight_trainer_apos_s_friend">Weight Trainer\'s Friend</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+</resources>
