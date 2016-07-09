@@ -61,14 +61,20 @@ public class Main3Activity extends Activity implements Runnable
     private static final int REQUEST_CONNECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     Button mScan;
+    Button btnStart;
+    TextView txtCount;
+    int runState = 0; // 0=idle, 1=start, 2=running
+    int zetaState = 0; // 0=0 degree, 1=90 degree
+    float count = 0;
     BluetoothAdapter mBluetoothAdapter;
     private UUID applicationUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private ProgressDialog mBluetoothConnectProgressDialog;
     private BluetoothSocket mBluetoothSocket;
     BluetoothDevice mBluetoothDevice;
 
-    int[] pTemp = new int[4]; // previous temp for collect old data name temp :putter said
+    int[] pStart = new int[4];
     public double Pmagnitude ; // for collect old magnitude
+    public double zeta;
     private String leftString;
     @Override
     public void onCreate(Bundle mSavedInstanceState)
@@ -79,6 +85,8 @@ public class Main3Activity extends Activity implements Runnable
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main3);
         mScan = (Button) findViewById(R.id.Scan);
+        btnStart = (Button) findViewById(R.id.btnStart);
+        txtCount = (TextView) findViewById(R.id.txtCount);
         mScan.setOnClickListener(new View.OnClickListener()
         {
             public void onClick(View mView)
@@ -102,6 +110,15 @@ public class Main3Activity extends Activity implements Runnable
                         startActivityForResult(connectIntent, REQUEST_CONNECT_DEVICE);
                     }
                 }
+            }
+        });
+        btnStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runState = 1;
+                zetaState = 0;
+                btnStart.setEnabled(false);
+
             }
         });
 
@@ -135,7 +152,7 @@ public class Main3Activity extends Activity implements Runnable
                 {
                     Bundle mExtra = mDataIntent.getExtras();
                     String mDeviceAddress = mExtra.getString("DeviceAddress");
-                    Log.v(TAG, "Coming incoming address " + mDeviceAddress);
+                    //log.v(TAG, "Coming incoming address " + mDeviceAddress);
                     mBluetoothDevice = mBluetoothAdapter.getRemoteDevice(mDeviceAddress);
                     mBluetoothConnectProgressDialog = ProgressDialog.show(this, "Connecting...", mBluetoothDevice.getName() + " : " + mBluetoothDevice.getAddress(), true, false);
                     Thread mBlutoothConnectThread = new Thread(this);
@@ -166,7 +183,7 @@ public class Main3Activity extends Activity implements Runnable
         {
             for (BluetoothDevice mDevice : mPairedDevices)
             {
-                Log.v(TAG, "PairedDevices: " + mDevice.getName() + " " + mDevice.getAddress());
+                //log.v(TAG, "PairedDevices: " + mDevice.getName() + " " + mDevice.getAddress());
             }
         }
     }
@@ -198,7 +215,7 @@ public class Main3Activity extends Activity implements Runnable
         }
         catch (IOException eConnectException)
         {
-            Log.d(TAG, "CouldNotConnectToSocket", eConnectException);
+            //log.d(TAG, "CouldNotConnectToSocket", eConnectException);
             closeSocket(mBluetoothSocket);
             return;
         }
@@ -233,24 +250,57 @@ public class Main3Activity extends Activity implements Runnable
                                         for(int j=0;j<inArray.length;j++){
                                             temp[j] = Integer.parseInt(inArray[j]);
                                         }
-                                        arrayListValues.add(temp);
-                                        double magnitude = Math.sqrt((Math.pow(temp[0], 2) + Math.pow(temp[1], 2) + Math.pow(temp[2], 2)));
-                                        double zeta = Math.acos((temp[0]*pTemp[0] + temp[1]*pTemp[1] + temp[2]*pTemp[2] )/( magnitude*Pmagnitude));
-                                        // check move way change
-                                        if(zeta>=Math.PI/2){
-                                            Pmagnitude = magnitude;
-                                        }else{
-                                            Pmagnitude = Pmagnitude + magnitude;
-                                        }
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                TextView Pmag = (TextView) findViewById(R.id.Pmag);
-                                                Pmag.setText(String.valueOf((int)Pmagnitude));
+                                        if (runState == 1) {
+                                            runState = 2;
+                                            for(int j=0;j<inArray.length;j++){
+                                                pStart[j] = temp[j];
                                             }
-                                        });
-                                        for(int j=0;j<inArray.length;j++){
-                                            pTemp[j] = temp[j];
+                                        } else if (runState == 2) {
+                                            arrayListValues.add(temp);
+                                            double magnitude = Math.sqrt((Math.pow(temp[0], 2) + Math.pow(temp[1], 2) + Math.pow(temp[2], 2)));
+                                            //zeta = Math.acos((temp[0]*pStart[0] + temp[1]*pStart[1] + temp[2]*pStart[2] )/( magnitude*Pmagnitude));
+                                            zeta = Math.acos((temp[1]*pStart[1] )/( magnitude*Pmagnitude));
+                                            // check move way change
+                                            //Log.e("90", ""+zeta);
+                                            if(/*zetaState == 0 && */zeta>=Math.PI/2.0){
+                                                // move 90 degree
+                                                Pmagnitude = magnitude;
+                                                zetaState = 1;
+                                                count += 0.5;
+                                                for(int j=0;j<inArray.length;j++){
+                                                    pStart[j] = temp[j];
+                                                }
+                                                Log.e("90", count+", "+zeta+", "+(Math.PI/2) + ", "+pStart[0] + ", "+pStart[1] + ", "+pStart[2]);
+                                            }/* else if(zetaState == 1 && zeta<=0.0){
+                                                Log.e("90", count+", "+zeta+", "+(Math.PI/2) + ", "+pStart[0] + ", "+pStart[1] + ", "+pStart[2]);
+                                                zetaState = 0;
+                                                count += 0.5;
+                                                for(int j=0;j<inArray.length;j++){
+                                                    pStart[j] = temp[j];
+                                                }
+                                            } */else {
+                                                Pmagnitude = Pmagnitude + magnitude;
+                                            }
+                                            txtCount.setText(String.valueOf(10.0 - count));
+                                            if (count >= 10.0) {
+                                                count = 0;
+                                                Log.e("90", "ssssssssssssssssssss");
+                                                runState = 0;
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        txtCount.setText("10");
+                                                        btnStart.setEnabled(true);
+                                                    }
+                                                });
+                                            }
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    TextView Pmag = (TextView) findViewById(R.id.Pmag);
+                                                    Pmag.setText(String.valueOf((int)zeta));
+                                                }
+                                            });
                                         }
                                     }catch (Exception e){
                                         e.printStackTrace();
@@ -258,11 +308,11 @@ public class Main3Activity extends Activity implements Runnable
 
 
                                 }
-                                Log.e("putter", arrayListValues.toString());
+                                //Log.e("putter", arrayListValues.toString());
                             }
 
 
-                            Log.e("readdddddddd", string);
+                            //Log.e("readdddddddd", string);
 
                             runOnUiThread(new Runnable() {
                                 @Override
@@ -298,11 +348,11 @@ public class Main3Activity extends Activity implements Runnable
         try
         {
             nOpenSocket.close();
-            Log.d(TAG, "SocketClosed");
+            //log.d(TAG, "SocketClosed");
         }
         catch (IOException ex)
         {
-            Log.d(TAG, "CouldNotCloseSocket");
+            //log.d(TAG, "CouldNotCloseSocket");
         }
     }
 
@@ -323,7 +373,7 @@ public class Main3Activity extends Activity implements Runnable
         private final OutputStream mmOutStream;
         public ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
-            Log.e("connnnnnnnnnnnnnnnn", "connnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn");
+            //log.e("connnnnnnnnnnnnnnnn", "connnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn");
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
             try {
@@ -371,7 +421,7 @@ public class Main3Activity extends Activity implements Runnable
             public void handleMessage(Message msg) {
 
                 byte[] writeBuf = (byte[]) msg.obj;
-                Log.e("hannnnd", new String(writeBuf));
+                //log.e("hannnnd", new String(writeBuf));
                 int begin = (int)msg.arg1;
                 int end = (int)msg.arg2;
 
