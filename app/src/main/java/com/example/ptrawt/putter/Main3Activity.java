@@ -64,6 +64,7 @@ public class Main3Activity extends Activity implements Runnable
     Button btnStart;
     EditText editCount;
     TextView txtCount;
+    TextView txtAlert;
     int runState = 0; // 0=idle, 1=start, 2=running
     int zetaState = 0; // 0=0 degree, 1=90 degree
     int totalCount;
@@ -74,7 +75,7 @@ public class Main3Activity extends Activity implements Runnable
     private BluetoothSocket mBluetoothSocket;
     BluetoothDevice mBluetoothDevice;
 
-    int[] pStart = new int[4];
+    int[] pStart = new int[5];
     public double Pmagnitude ; // for collect old magnitude
     public double zeta;
     private String leftString;
@@ -90,6 +91,7 @@ public class Main3Activity extends Activity implements Runnable
         btnStart = (Button) findViewById(R.id.btnStart);
         editCount = (EditText) findViewById(R.id.editCount);
         txtCount = (TextView) findViewById(R.id.txtCount);
+        txtAlert = (TextView) findViewById(R.id.txtAlert);
         mScan.setOnClickListener(new View.OnClickListener()
         {
             public void onClick(View mView)
@@ -249,8 +251,8 @@ public class Main3Activity extends Activity implements Runnable
                             ArrayList<int[]> arrayListValues = new ArrayList<int[]>();
                             for(int i=0;i<stringArray.length;i++){
                                 String inArray[]= stringArray[i].split(",");
-                                int[] temp = new int[4];
-                                if(inArray.length==4){
+                                int[] temp = new int[5]; //เพิ่มเป็น 5 ช่อง
+                                if(inArray.length==5){
                                     try{
                                         for(int j=0;j<inArray.length;j++){
                                             temp[j] = Integer.parseInt(inArray[j]);
@@ -267,17 +269,25 @@ public class Main3Activity extends Activity implements Runnable
                                             //zeta = Math.acos((temp[1]*pStart[1] )/( magnitude*Pmagnitude));
                                             // check move way change
                                             //Log.e("90", ""+zeta);
-                                            if(magnitude > 20) {
-                                                if(/*zetaState == 0 && */zeta>=Math.PI/2.0){
-                                                    // move 90 degree
-                                                    Pmagnitude = magnitude;
-                                                    zetaState = 1;
-                                                    count += 0.5;
-                                                    for(int j=0;j<inArray.length;j++){
-                                                        pStart[j] = temp[j];
-                                                    }
-                                                    Log.e("90", count+", "+zeta+", "+(Math.PI/2) + ", "+pStart[0] + ", "+pStart[1] + ", "+pStart[2]);
-                                                }/* else if(zetaState == 1 && zeta<=0.0){
+                                            if(temp[4]<=45){
+                                                //print text on screen too much left
+                                                txtAlert.setText("too much left");
+                                            }else if (temp[4]>=135){
+                                                //print text on screen too much right
+                                                txtAlert.setText("too much right");
+                                            }else{
+                                                txtAlert.setText("");
+                                                if(magnitude > 20) {
+                                                    if(/*zetaState == 0 && */zeta>=Math.PI/2.0){
+                                                        // move 90 degree
+                                                        Pmagnitude = magnitude;
+                                                        zetaState = 1;
+                                                        count += 0.5;
+                                                        for(int j=0;j<inArray.length;j++){
+                                                            pStart[j] = temp[j];
+                                                        }
+                                                        Log.e("90", count+", "+zeta+", "+(Math.PI/2) + ", "+pStart[0] + ", "+pStart[1] + ", "+pStart[2]);
+                                                    }/* else if(zetaState == 1 && zeta<=0.0){
                                                     Log.e("90", count+", "+zeta+", "+(Math.PI/2) + ", "+pStart[0] + ", "+pStart[1] + ", "+pStart[2]);
                                                     zetaState = 0;
                                                     count += 0.5;
@@ -285,35 +295,36 @@ public class Main3Activity extends Activity implements Runnable
                                                         pStart[j] = temp[j];
                                                     }
                                                 } */else {
-                                                    Pmagnitude = Pmagnitude + magnitude;
-                                                }
-                                                txtCount.setText(String.valueOf((int)Math.ceil(totalCount - count)));
-                                                if (count >= totalCount) {
-                                                    count = 0;
-                                                    Log.e("90", "ssssssssssssssssssss");
-                                                    runState = 0;
+                                                        Pmagnitude = Pmagnitude + magnitude;
+                                                    }
+                                                    txtCount.setText(String.valueOf((int)Math.ceil(totalCount - count)));
+                                                    if (count >= totalCount) {
+                                                        count = 0;
+                                                        Log.e("90", "ssssssssssssssssssss");
+                                                        runState = 0;
+                                                        runOnUiThread(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                //txtCount.setText(String.valueOf(totalCount));
+                                                                txtAlert.setText("");
+                                                                btnStart.setEnabled(true);
+                                                            }
+                                                        });
+                                                    }
                                                     runOnUiThread(new Runnable() {
                                                         @Override
                                                         public void run() {
-                                                            //txtCount.setText(String.valueOf(totalCount));
-                                                            btnStart.setEnabled(true);
+                                                            TextView Pmag = (TextView) findViewById(R.id.Pmag);
+                                                            Pmag.setText(String.valueOf((int)zeta));
                                                         }
                                                     });
                                                 }
-                                                runOnUiThread(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        TextView Pmag = (TextView) findViewById(R.id.Pmag);
-                                                        Pmag.setText(String.valueOf((int)zeta));
-                                                    }
-                                                });
                                             }
+
                                         }
                                     }catch (Exception e){
                                         e.printStackTrace();
                                     }
-
-
                                 }
                                 //Log.e("putter", arrayListValues.toString());
                             }
