@@ -277,7 +277,7 @@ public class Main3Activity extends Activity implements Runnable
                                                 txtAlert.setText("too much right");
                                             }else{
                                                 txtAlert.setText("");
-                                                if(magnitude > 20) {
+                                                if(magnitude > 60) {
                                                     if(/*zetaState == 0 && */zeta>=Math.PI/2.0){
                                                         // move 90 degree
                                                         Pmagnitude = magnitude;
